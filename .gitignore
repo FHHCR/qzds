@@ -1,0 +1,44 @@
+# Java / Maven
+target/
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+
+# Node / 前端（后续 frontend 目录）
+node_modules/
+dist/
+
+# 日志与临时文件
+*.log
+logs/
+*.tmp
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 敏感配置（密钥类文件禁止提交）
+*.env
+.env.local
+.env.*.local
+application-local.yml
+
+# 前后端各自的 README（由根目录 README.md 统一维护，不重复入库）
+backend/README.md
+frontend/README.md
+
+# 内部策划文档与配套资产（不入库）
+电商平台项目策划书.md
+assets/
+
+# 其他
+*.hprof
+*.orig

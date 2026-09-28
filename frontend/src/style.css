@@ -1,0 +1,22 @@
+/* 全局基础样式（骨架阶段从简，业务样式随页面按需添加） */
+:root {
+  --text: #303133;
+  --text-h: #1a1a1a;
+  --bg: #f5f7fa;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  min-height: 100vh;
+}

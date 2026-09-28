@@ -1,0 +1,61 @@
+server:
+  port: 8080
+
+spring:
+  profiles:
+    active: local
+  application:
+    name: mall-backend
+  # ============ MySQL 数据源 ============
+  # 数据库账号密码可通过环境变量覆盖：MYSQL_PASSWORD
+  # 骨架阶段即使连不上库也不会阻塞启动（initialization-fail-timeout: -1）
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/mall?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: ${MYSQL_PASSWORD:}
+    hikari:
+      initialization-fail-timeout: -1
+      maximum-pool-size: 10
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  # ============ Redis ============
+  # 本地未启动 Redis 时不影响应用启动（懒加载）；正式使用请按需开启密码
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      password: ${REDIS_PASSWORD:}
+      timeout: 3s
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+
+# ============ MyBatis-Plus ============
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    # 开发阶段打印 SQL，上线前关闭
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    banner: false
+    db-config:
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+# ============ 接口文档 ============
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    com.mall: debug
+
+# ============ JWT 认证 ============
+mall:
+  jwt:
+    # 密钥至少 32 字节，生产环境务必通过环境变量 JWT_SECRET 覆盖
+    secret: ${JWT_SECRET:mall-dev-secret-key-change-in-production-0123456789}
+    expiration-hours: 2
