@@ -1,64 +1,164 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import request from '../utils/request'
-import { useAppStore } from '../stores/app'
+import { productApi } from '../api/product'
 
 const router = useRouter()
-const appStore = useAppStore()
-const backendStatus = ref('检测中...')
+const categories = ref([])
+const products = ref([])
+const loading = ref(false)
 
-onMounted(async () => {
-  try {
-    const data = await request.get('/system/ping')
-    backendStatus.value = `${data.service} - ${data.status}（${data.time}）`
-  } catch (e) {
-    backendStatus.value = '后端未连接'
-  }
-  // 已登录则拉取当前用户
-  if (appStore.token) {
-    try {
-      appStore.setUser(await request.get('/user/me'))
-    } catch (e) {
-      appStore.logout() // token 失效则清除
-    }
-  }
-})
-
-function logout() {
-  appStore.logout()
-  router.push('/login')
+async function loadCategories() {
+  categories.value = await productApi.listCategories()
 }
+
+async function loadProducts() {
+  loading.value = true
+  try {
+    const data = await productApi.listProducts({ page: 1, size: 8 })
+    products.value = data.records
+  } finally {
+    loading.value = false
+  }
+}
+
+function formatPrice(price) {
+  return (price / 100).toFixed(2)
+}
+
+function goCategory(categoryId) {
+  router.push({ path: '/products', query: { categoryId } })
+}
+
+onMounted(() => {
+  loadCategories()
+  loadProducts()
+})
 </script>
 
 <template>
   <div class="home">
-    <h1>{{ appStore.appName }} · 前端骨架</h1>
-    <p>技术栈：Vue 3 + Vite + Pinia + Vue Router + Element Plus + Axios</p>
-    <p>后端连通性：<span :class="{ ok: backendStatus.startsWith('mall') }">{{ backendStatus }}</span></p>
+    <!-- Banner 轮播 -->
+    <el-carousel height="280px" class="banner">
+      <el-carousel-item v-for="n in 3" :key="n">
+        <div class="banner-item">
+          <img :src="`https://picsum.photos/seed/banner${n}/1200/560`" alt="banner" />
+        </div>
+      </el-carousel-item>
+    </el-carousel>
 
-    <el-divider />
+    <!-- 分类快捷入口 -->
+    <section class="section">
+      <h3>商品分类</h3>
+      <div class="cats">
+        <div v-for="c in categories" :key="c.id" class="cat" @click="goCategory(c.id)">
+          {{ c.name }}
+        </div>
+      </div>
+    </section>
 
-    <template v-if="appStore.token && appStore.user">
-      <p>当前用户：{{ appStore.user.nickname }}（{{ appStore.user.username }}）</p>
-      <el-button @click="logout">退出登录</el-button>
-    </template>
-    <el-button v-else type="primary" @click="router.push('/login')">去登录</el-button>
+    <!-- 推荐商品 -->
+    <section class="section">
+      <h3>为你推荐</h3>
+      <div v-loading="loading" class="grid">
+        <el-card v-for="p in products" :key="p.id" class="card" shadow="hover" @click="router.push(`/products/${p.id}`)">
+          <div class="image">
+            <img v-if="p.mainImage" :src="p.mainImage" :alt="p.name" />
+            <span v-else>暂无图片</span>
+          </div>
+          <div class="name">{{ p.name }}</div>
+          <div class="price">¥ {{ formatPrice(p.price) }}</div>
+        </el-card>
+        <el-empty v-if="!loading && products.length === 0" description="暂无商品" />
+      </div>
+      <el-button class="more" @click="router.push('/products')">查看全部商品</el-button>
+    </section>
   </div>
 </template>
 
 <style scoped>
 .home {
-  max-width: 640px;
-  margin: 80px auto;
-  padding: 32px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+.banner {
+  border-radius: 8px;
+  overflow: hidden;
+}
+.banner-item {
+  width: 100%;
+  height: 100%;
+}
+.banner-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.section {
+  margin-top: 28px;
+}
+.section h3 {
+  margin: 0 0 16px;
+  font-size: 18px;
+}
+.cats {
+  display: flex;
+  gap: 16px;
+}
+.cat {
+  flex: 1;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: #fff;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  text-align: center;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s;
 }
-.ok {
-  color: #67c23a;
+.cat:hover {
+  color: #e64340;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  min-height: 200px;
+}
+.card {
+  width: 220px;
+  cursor: pointer;
+}
+.image {
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+  color: #999;
+  font-size: 14px;
+}
+.image img {
+  max-width: 100%;
+  max-height: 100%;
+}
+.name {
+  margin: 8px 0;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.price {
+  color: #e64340;
   font-weight: 600;
+  font-size: 16px;
+}
+.more {
+  margin-top: 16px;
+  width: 100%;
 }
 </style>

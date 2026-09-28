@@ -13,6 +13,36 @@ const routes = [
     component: () => import('../views/Login.vue'),
     meta: { title: '登录', public: true },
   },
+  {
+    path: '/products',
+    name: 'products',
+    component: () => import('../views/ProductList.vue'),
+    meta: { title: '商品列表', public: true },
+  },
+  {
+    path: '/products/:id',
+    name: 'product-detail',
+    component: () => import('../views/ProductDetail.vue'),
+    meta: { title: '商品详情', public: true },
+  },
+  {
+    path: '/cart',
+    name: 'cart',
+    component: () => import('../views/Cart.vue'),
+    meta: { title: '购物车' },
+  },
+  {
+    path: '/orders',
+    name: 'orders',
+    component: () => import('../views/OrderList.vue'),
+    meta: { title: '我的订单' },
+  },
+  {
+    path: '/orders/:id',
+    name: 'order-detail',
+    component: () => import('../views/OrderDetail.vue'),
+    meta: { title: '订单详情' },
+  },
 ]
 
 const router = createRouter({

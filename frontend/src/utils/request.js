@@ -34,13 +34,15 @@ request.interceptors.response.use(
     return res.data
   },
   (error) => {
+    // 统一从后端 Result 中取提示信息（HTTP 状态码与业务码一致）
+    const message = error.response?.data?.message || error.message || '网络异常'
     if (error.response && error.response.status === 401) {
       // 登录态失效：清除 token 并跳转登录页
       localStorage.removeItem('token')
       ElMessage.error('登录已失效，请重新登录')
       window.location.href = '/login'
     } else {
-      ElMessage.error(error.message || '网络异常')
+      ElMessage.error(message)
     }
     return Promise.reject(error)
   }

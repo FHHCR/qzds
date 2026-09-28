@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import request from '../utils/request'
+import { userApi } from '../api/user'
 import { useAppStore } from '../stores/app'
 
 const router = useRouter()
@@ -21,7 +21,7 @@ async function submit() {
   loading.value = true
   try {
     if (mode.value === 'login') {
-      const data = await request.post('/user/login', {
+      const data = await userApi.login({
         username: form.value.username,
         password: form.value.password,
       })
@@ -30,7 +30,7 @@ async function submit() {
       ElMessage.success('登录成功')
       router.push(route.query.redirect || '/')
     } else {
-      await request.post('/user/register', form.value)
+      await userApi.register(form.value)
       ElMessage.success('注册成功，请登录')
       mode.value = 'login'
     }
