@@ -26,7 +26,12 @@ async function submit() {
         password: form.value.password,
       })
       appStore.setToken(data.token)
-      appStore.setUser({ id: data.id, username: data.username, nickname: data.nickname })
+      appStore.setUser({
+        id: data.id,
+        username: data.username,
+        nickname: data.nickname,
+        role: data.role,
+      })
       ElMessage.success('登录成功')
       router.push(route.query.redirect || '/')
     } else {

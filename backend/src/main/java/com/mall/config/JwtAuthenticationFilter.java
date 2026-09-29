@@ -37,11 +37,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 Claims claims = jwtUtil.parseToken(header.substring(7));
                 Long uid = claims.get("uid", Number.class).longValue();
+                Integer role = claims.get("role", Number.class).intValue();
+                // 按角色设置权限：2 管理员 / 其他 普通用户
+                String authority = (role != null && role == 2) ? "ROLE_ADMIN" : "ROLE_USER";
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(
                                 claims.getSubject(),
                                 null,
-                                List.of(new SimpleGrantedAuthority("ROLE_USER")));
+                                List.of(new SimpleGrantedAuthority(authority)));
                 // 将用户 id 放入 details，供 Controller 取当前用户
                 authentication.setDetails(uid);
                 SecurityContextHolder.getContext().setAuthentication(authentication);

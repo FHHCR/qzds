@@ -24,6 +24,9 @@ public class User {
 
     private String nickname;
 
+    /** 角色：1 普通用户 / 2 管理员 */
+    private Integer role;
+
     /** 状态：1 正常 / 0 禁用 */
     private Integer status;
 

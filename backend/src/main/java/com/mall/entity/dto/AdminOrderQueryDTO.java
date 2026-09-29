@@ -5,19 +5,13 @@ import jakarta.validation.constraints.Min;
 import lombok.Data;
 
 /**
- * 商品列表查询 DTO。
+ * 管理端订单列表查询（跨用户，可按状态筛选）。
  */
 @Data
-public class ProductQueryDTO {
+public class AdminOrderQueryDTO {
 
-    /** 分类 id，可选 */
-    private Long categoryId;
-
-    /** 关键词，模糊匹配商品名，可选 */
-    private String keyword;
-
-    /** 排序：default 默认 / price_asc 价格升序 / price_desc 价格降序，可选 */
-    private String sort;
+    /** 状态：0 待支付 / 1 已支付 / 2 已取消，可选 */
+    private Integer status;
 
     @Min(value = 1, message = "页码不能小于 1")
     private Long page = 1L;

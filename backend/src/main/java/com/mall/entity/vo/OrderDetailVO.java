@@ -22,6 +22,9 @@ public class OrderDetailVO {
 
     private Long totalPrice;
 
+    /** 收货地址快照 */
+    private String addressSnapshot;
+
     /** 状态：0 待支付 / 1 已支付 / 2 已取消 */
     private Integer status;
 

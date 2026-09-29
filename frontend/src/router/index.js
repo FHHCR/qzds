@@ -32,6 +32,18 @@ const routes = [
     meta: { title: '购物车' },
   },
   {
+    path: '/checkout',
+    name: 'checkout',
+    component: () => import('../views/Checkout.vue'),
+    meta: { title: '确认订单' },
+  },
+  {
+    path: '/address',
+    name: 'address',
+    component: () => import('../views/AddressList.vue'),
+    meta: { title: '收货地址' },
+  },
+  {
     path: '/orders',
     name: 'orders',
     component: () => import('../views/OrderList.vue'),
@@ -43,6 +55,45 @@ const routes = [
     component: () => import('../views/OrderDetail.vue'),
     meta: { title: '订单详情' },
   },
+  // 后台管理（需管理员）
+  {
+    path: '/admin',
+    component: () => import('../views/admin/AdminLayout.vue'),
+    meta: { title: '后台管理', admin: true },
+    redirect: '/admin/dashboard',
+    children: [
+      {
+        path: 'dashboard',
+        name: 'admin-dashboard',
+        component: () => import('../views/admin/AdminDashboard.vue'),
+        meta: { title: '仪表盘', admin: true },
+      },
+      {
+        path: 'products',
+        name: 'admin-products',
+        component: () => import('../views/admin/AdminProducts.vue'),
+        meta: { title: '商品管理', admin: true },
+      },
+      {
+        path: 'categories',
+        name: 'admin-categories',
+        component: () => import('../views/admin/AdminCategories.vue'),
+        meta: { title: '分类管理', admin: true },
+      },
+      {
+        path: 'orders',
+        name: 'admin-orders',
+        component: () => import('../views/admin/AdminOrders.vue'),
+        meta: { title: '订单管理', admin: true },
+      },
+      {
+        path: 'users',
+        name: 'admin-users',
+        component: () => import('../views/admin/AdminUsers.vue'),
+        meta: { title: '用户管理', admin: true },
+      },
+    ],
+  },
 ]
 
 const router = createRouter({
@@ -50,11 +101,14 @@ const router = createRouter({
   routes,
 })
 
-// 登录守卫：未登录访问非公开页 → 跳转登录页
+// 登录守卫：未登录访问非公开页 → 跳转登录页；非管理员访问管理端 → 回首页
 router.beforeEach((to) => {
   const token = localStorage.getItem('token')
   if (!to.meta.public && !token) {
     return { name: 'login', query: { redirect: to.fullPath } }
+  }
+  if (to.meta.admin && localStorage.getItem('role') !== '2') {
+    return { path: '/' }
   }
 })
 

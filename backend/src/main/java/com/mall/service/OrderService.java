@@ -1,5 +1,7 @@
 package com.mall.service;
 
+import com.mall.common.PageVO;
+import com.mall.entity.dto.AdminOrderQueryDTO;
 import com.mall.entity.dto.CreateOrderDTO;
 import com.mall.entity.vo.OrderDetailVO;
 import com.mall.entity.vo.OrderVO;
@@ -7,7 +9,7 @@ import com.mall.entity.vo.OrderVO;
 import java.util.List;
 
 /**
- * 订单服务：下单（事务）、列表、详情、支付、取消。
+ * 订单服务：下单（事务）、列表、详情、支付、取消，以及管理端订单查询。
  */
 public interface OrderService {
 
@@ -25,4 +27,10 @@ public interface OrderService {
 
     /** 取消订单：待支付可取消，恢复库存 */
     void cancel(Long userId, Long id);
+
+    /** 管理端：订单分页（跨用户，可按状态筛选） */
+    PageVO<OrderVO> adminPage(AdminOrderQueryDTO query);
+
+    /** 管理端：订单详情（跨用户） */
+    OrderDetailVO adminGetDetail(Long id);
 }

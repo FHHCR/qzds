@@ -8,7 +8,7 @@ const router = useRouter()
 const categories = ref([])
 const products = ref([])
 const total = ref(0)
-const query = ref({ categoryId: null, page: 1, size: 8 })
+const query = ref({ categoryId: null, keyword: '', sort: '', page: 1, size: 8 })
 const loading = ref(false)
 
 async function loadCategories() {
@@ -26,8 +26,14 @@ async function loadProducts() {
   }
 }
 
-function selectCategory() {
-  // v-model 已同步 query.categoryId，这里只需回到第一页并重新加载
+/** 分类 / 排序切换：回到第一页重新加载 */
+function onFilterChange() {
+  query.value.page = 1
+  loadProducts()
+}
+
+/** 搜索：回车触发，回到第一页 */
+function onSearch() {
   query.value.page = 1
   loadProducts()
 }
@@ -42,10 +48,14 @@ function formatPrice(price) {
 }
 
 onMounted(() => {
-  // 支持从首页分类入口跳转：/products?categoryId=xx
+  // 支持从首页/外部跳转：/products?categoryId=xx&keyword=xx
   const categoryId = route.query.categoryId
+  const keyword = route.query.keyword
   if (categoryId) {
     query.value.categoryId = Number(categoryId)
+  }
+  if (keyword) {
+    query.value.keyword = String(keyword)
   }
   loadCategories()
   loadProducts()
@@ -56,7 +66,24 @@ onMounted(() => {
   <div class="products">
     <h2>商品列表</h2>
 
-    <el-radio-group v-model="query.categoryId" class="category-bar" @change="selectCategory">
+    <!-- 搜索与排序 -->
+    <div class="toolbar">
+      <el-input
+        v-model="query.keyword"
+        class="search"
+        placeholder="搜索商品名称，回车确认"
+        clearable
+        @keyup.enter="onSearch"
+        @clear="onSearch"
+      />
+      <el-select v-model="query.sort" class="sort" placeholder="排序" @change="onFilterChange">
+        <el-option label="默认排序" value="" />
+        <el-option label="价格从低到高" value="price_asc" />
+        <el-option label="价格从高到低" value="price_desc" />
+      </el-select>
+    </div>
+
+    <el-radio-group v-model="query.categoryId" class="category-bar" @change="onFilterChange">
       <el-radio-button :value="null">全部</el-radio-button>
       <el-radio-button v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</el-radio-button>
     </el-radio-group>
@@ -70,7 +97,7 @@ onMounted(() => {
         <div class="name">{{ p.name }}</div>
         <div class="price">¥ {{ formatPrice(p.price) }}</div>
       </el-card>
-      <el-empty v-if="!loading && products.length === 0" description="暂无商品" />
+      <el-empty v-if="!loading && products.length === 0" description="没有找到相关商品" />
     </div>
 
     <el-pagination
@@ -90,6 +117,17 @@ onMounted(() => {
   max-width: 960px;
   margin: 0 auto;
   padding: 24px;
+}
+.toolbar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.search {
+  width: 320px;
+}
+.sort {
+  width: 160px;
 }
 .category-bar {
   margin-bottom: 20px;

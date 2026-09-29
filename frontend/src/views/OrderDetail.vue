@@ -63,6 +63,11 @@ onMounted(load)
           </el-tag>
         </div>
 
+        <div v-if="order.addressSnapshot" class="addr">
+          <p class="addr-title">收货信息</p>
+          <p class="addr-text">{{ order.addressSnapshot }}</p>
+        </div>
+
         <div v-for="item in order.items" :key="item.id" class="row">
           <div class="image">
             <img v-if="item.productImage" :src="item.productImage" :alt="item.productName" />
@@ -121,6 +126,21 @@ onMounted(load)
   margin: 0;
   color: #999;
   font-size: 13px;
+}
+.addr {
+  margin: 16px 0;
+  padding: 12px 16px;
+  background: #f7f8fa;
+  border-radius: 6px;
+}
+.addr-title {
+  margin: 0 0 4px;
+  font-size: 13px;
+  color: #999;
+}
+.addr-text {
+  margin: 0;
+  font-size: 14px;
 }
 .row {
   display: flex;

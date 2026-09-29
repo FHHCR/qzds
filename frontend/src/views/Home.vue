@@ -7,6 +7,7 @@ const router = useRouter()
 const categories = ref([])
 const products = ref([])
 const loading = ref(false)
+const keyword = ref('')
 
 async function loadCategories() {
   categories.value = await productApi.listCategories()
@@ -30,6 +31,12 @@ function goCategory(categoryId) {
   router.push({ path: '/products', query: { categoryId } })
 }
 
+function onSearch() {
+  const kw = keyword.value.trim()
+  if (!kw) return
+  router.push({ path: '/products', query: { keyword: kw } })
+}
+
 onMounted(() => {
   loadCategories()
   loadProducts()
@@ -38,6 +45,22 @@ onMounted(() => {
 
 <template>
   <div class="home">
+    <!-- 搜索栏 -->
+    <div class="search-bar">
+      <el-input
+        v-model="keyword"
+        class="search"
+        size="large"
+        placeholder="搜索商品，如：手机、车厘子"
+        clearable
+        @keyup.enter="onSearch"
+      >
+        <template #append>
+          <el-button type="primary" @click="onSearch">搜索</el-button>
+        </template>
+      </el-input>
+    </div>
+
     <!-- Banner 轮播 -->
     <el-carousel height="280px" class="banner">
       <el-carousel-item v-for="n in 3" :key="n">
@@ -85,6 +108,14 @@ onMounted(() => {
 .banner {
   border-radius: 8px;
   overflow: hidden;
+}
+.search-bar {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+.search {
+  width: 480px;
 }
 .banner-item {
   width: 100%;

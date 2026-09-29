@@ -3,7 +3,6 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { cartApi } from '../api/cart'
-import { orderApi } from '../api/order'
 
 const router = useRouter()
 const items = ref([])
@@ -55,13 +54,7 @@ async function checkout() {
     ElMessage.warning('请先勾选要结算的商品')
     return
   }
-  try {
-    const order = await orderApi.createOrder({ cartIds: ids })
-    ElMessage.success('下单成功')
-    router.push(`/orders/${order.id}`)
-  } catch (e) {
-    load()
-  }
+  router.push(`/checkout?ids=${ids.join(',')}`)
 }
 
 onMounted(load)

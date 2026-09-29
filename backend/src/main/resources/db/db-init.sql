@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS `user` (
     username    VARCHAR(50)  NOT NULL COMMENT '用户名（登录账号）',
     password    VARCHAR(100) NOT NULL COMMENT '密码（BCrypt 加密）',
     nickname    VARCHAR(50)  NOT NULL DEFAULT '' COMMENT '昵称',
+    role        TINYINT      NOT NULL DEFAULT 1 COMMENT '角色：1 普通用户 / 2 管理员',
     status      TINYINT      NOT NULL DEFAULT 1 COMMENT '状态：1 正常 / 0 禁用',
     deleted     TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除：0 未删 / 1 已删',
     create_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -38,6 +39,18 @@ CREATE TABLE IF NOT EXISTS `user` (
     UNIQUE KEY uk_username (username)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4 COMMENT ='用户表';
+
+-- 兼容旧表：若 user 表缺少 role 列则补加（幂等）
+SET @col_exists := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = 'mall' AND TABLE_NAME = 'user' AND COLUMN_NAME = 'role'
+);
+SET @ddl := IF(@col_exists = 0,
+    'ALTER TABLE `user` ADD COLUMN role TINYINT NOT NULL DEFAULT 1 COMMENT ''角色：1 普通用户 / 2 管理员'' AFTER nickname',
+    'SELECT 1');
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- =====================================================================
 -- 商品分类表（商品模块）
@@ -93,18 +106,31 @@ CREATE TABLE IF NOT EXISTS `cart` (
 -- 订单表（订单模块；主键雪花 id，商品信息以明细快照留存）
 -- =====================================================================
 CREATE TABLE IF NOT EXISTS `order` (
-    id          BIGINT      NOT NULL COMMENT '主键（雪花 id）',
-    order_no    VARCHAR(32) NOT NULL COMMENT '订单号',
-    user_id     BIGINT      NOT NULL COMMENT '用户 id',
-    total_price BIGINT      NOT NULL DEFAULT 0 COMMENT '订单总价（单位：分）',
-    status      TINYINT     NOT NULL DEFAULT 0 COMMENT '状态：0 待支付 / 1 已支付 / 2 已取消',
-    create_time DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    update_time DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    id               BIGINT      NOT NULL COMMENT '主键（雪花 id）',
+    order_no         VARCHAR(32) NOT NULL COMMENT '订单号',
+    user_id          BIGINT      NOT NULL COMMENT '用户 id',
+    total_price      BIGINT      NOT NULL DEFAULT 0 COMMENT '订单总价（单位：分）',
+    address_snapshot VARCHAR(255) NOT NULL DEFAULT '' COMMENT '收货地址快照（收货人+手机+地址，下单时固化）',
+    status           TINYINT     NOT NULL DEFAULT 0 COMMENT '状态：0 待支付 / 1 已支付 / 2 已取消',
+    create_time      DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time      DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
     UNIQUE KEY uk_order_no (order_no),
     KEY idx_user (user_id)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4 COMMENT ='订单表';
+
+-- 兼容旧表：若 order 表缺少 address_snapshot 列则补加（幂等）
+SET @col_exists := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = 'mall' AND TABLE_NAME = 'order' AND COLUMN_NAME = 'address_snapshot'
+);
+SET @ddl := IF(@col_exists = 0,
+    'ALTER TABLE `order` ADD COLUMN address_snapshot VARCHAR(255) NOT NULL DEFAULT '''' COMMENT ''收货地址快照'' AFTER total_price',
+    'SELECT 1');
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- =====================================================================
 -- 订单明细表（订单模块；商品信息下单时快照，后续商品变更不影响历史订单）
@@ -122,6 +148,24 @@ CREATE TABLE IF NOT EXISTS `order_item` (
     KEY idx_order (order_id)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4 COMMENT ='订单明细表';
+
+-- =====================================================================
+-- 收货地址表（地址模块；归属用户，下单时快照到 order.address_snapshot）
+-- =====================================================================
+CREATE TABLE IF NOT EXISTS `address` (
+    id          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    user_id     BIGINT       NOT NULL COMMENT '用户 id',
+    receiver    VARCHAR(50)  NOT NULL COMMENT '收货人',
+    phone       VARCHAR(20)  NOT NULL COMMENT '手机号',
+    region      VARCHAR(100) NOT NULL DEFAULT '' COMMENT '省市区',
+    detail      VARCHAR(255) NOT NULL COMMENT '详细地址',
+    is_default  TINYINT      NOT NULL DEFAULT 0 COMMENT '是否默认：1 是 / 0 否',
+    create_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    KEY idx_user (user_id)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4 COMMENT ='收货地址表';
 
 -- =====================================================================
 -- 演示数据（可选）：首次初始化或演示用，可自行删除。
@@ -150,3 +194,16 @@ INSERT INTO product (id, category_id, name, main_image, price, stock, status) VA
 (12, 5, '兰蔻小黑瓶精华',    'https://picsum.photos/seed/lancome/400/400',  108000, 90, 1)
 ON DUPLICATE KEY UPDATE name = VALUES(name), main_image = VALUES(main_image),
                         price = VALUES(price), stock = VALUES(stock), status = VALUES(status);
+
+-- 演示收货地址（user_id 5 = demo_store，6 = cartuser，与演示账号对应）
+INSERT INTO address (id, user_id, receiver, phone, region, detail, is_default) VALUES
+(1, 5, '演示店主', '13800000001', '浙江省 杭州市 西湖区', '文三路 100 号 1 栋 101 室', 1),
+(2, 6, '陈同学',   '13900000002', '浙江省 杭州市 余杭区', '良睦路 1399 号 梦想小镇 3 号楼', 1)
+ON DUPLICATE KEY UPDATE user_id = VALUES(user_id), receiver = VALUES(receiver), phone = VALUES(phone),
+                        region = VALUES(region), detail = VALUES(detail), is_default = VALUES(is_default);
+
+-- 演示管理员（admin/123456，role=2 管理员；哈希为 123456 的 BCrypt 值）
+INSERT INTO `user` (id, username, password, nickname, role, status) VALUES
+(7, 'admin', '$2a$10$osMwiKzsn.Lg7.H/XwFYJ.1am7UAZst3aZpa2Vs1RSJDERezx1JaW', '管理员', 2, 1)
+ON DUPLICATE KEY UPDATE password = VALUES(password), nickname = VALUES(nickname),
+                        role = VALUES(role), status = VALUES(status);

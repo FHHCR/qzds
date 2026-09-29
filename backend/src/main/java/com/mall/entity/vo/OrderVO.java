@@ -21,6 +21,12 @@ public class OrderVO {
     /** 订单总价（单位：分） */
     private Long totalPrice;
 
+    /** 下单用户 id（管理端展示用） */
+    private Long userId;
+
+    /** 收货地址快照 */
+    private String addressSnapshot;
+
     /** 状态：0 待支付 / 1 已支付 / 2 已取消 */
     private Integer status;
 

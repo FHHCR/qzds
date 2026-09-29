@@ -1,14 +1,19 @@
 package com.mall.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.mall.common.BusinessException;
+import com.mall.common.PageVO;
+import com.mall.entity.dto.AdminOrderQueryDTO;
 import com.mall.entity.dto.CreateOrderDTO;
+import com.mall.entity.po.Address;
 import com.mall.entity.po.Cart;
 import com.mall.entity.po.Order;
 import com.mall.entity.po.OrderItem;
 import com.mall.entity.po.Product;
 import com.mall.entity.vo.OrderDetailVO;
 import com.mall.entity.vo.OrderVO;
+import com.mall.mapper.AddressMapper;
 import com.mall.mapper.CartMapper;
 import com.mall.mapper.OrderItemMapper;
 import com.mall.mapper.OrderMapper;
@@ -34,13 +39,16 @@ public class OrderServiceImpl implements OrderService {
     private final OrderItemMapper orderItemMapper;
     private final CartMapper cartMapper;
     private final ProductMapper productMapper;
+    private final AddressMapper addressMapper;
 
     public OrderServiceImpl(OrderMapper orderMapper, OrderItemMapper orderItemMapper,
-                            CartMapper cartMapper, ProductMapper productMapper) {
+                            CartMapper cartMapper, ProductMapper productMapper,
+                            AddressMapper addressMapper) {
         this.orderMapper = orderMapper;
         this.orderItemMapper = orderItemMapper;
         this.cartMapper = cartMapper;
         this.productMapper = productMapper;
+        this.addressMapper = addressMapper;
     }
 
     @Override
@@ -56,6 +64,14 @@ public class OrderServiceImpl implements OrderService {
                 throw new BusinessException(400, "部分购物车条目不存在");
             }
         }
+
+        // 校验收货地址归属，并固化快照
+        Address address = addressMapper.selectById(req.getAddressId());
+        if (address == null || !address.getUserId().equals(userId)) {
+            throw new BusinessException(400, "收货地址不存在");
+        }
+        String addressSnapshot = (address.getReceiver() + " " + address.getPhone() + " "
+                + address.getRegion() + " " + address.getDetail()).trim();
 
         // 校验商品与库存，计算总价
         List<Long> productIds = carts.stream().map(Cart::getProductId).toList();
@@ -78,6 +94,7 @@ public class OrderServiceImpl implements OrderService {
         order.setOrderNo(genOrderNo());
         order.setUserId(userId);
         order.setTotalPrice(total);
+        order.setAddressSnapshot(addressSnapshot);
         order.setStatus(0);
         orderMapper.insert(order);
 
@@ -104,6 +121,7 @@ public class OrderServiceImpl implements OrderService {
         vo.setId(order.getId());
         vo.setOrderNo(order.getOrderNo());
         vo.setTotalPrice(order.getTotalPrice());
+        vo.setAddressSnapshot(order.getAddressSnapshot());
         vo.setStatus(order.getStatus());
         vo.setItemCount(carts.stream().mapToInt(Cart::getQuantity).sum());
         vo.setCreateTime(order.getCreateTime());
@@ -131,6 +149,7 @@ public class OrderServiceImpl implements OrderService {
             vo.setId(order.getId());
             vo.setOrderNo(order.getOrderNo());
             vo.setTotalPrice(order.getTotalPrice());
+            vo.setAddressSnapshot(order.getAddressSnapshot());
             vo.setStatus(order.getStatus());
             vo.setItemCount(countMap.getOrDefault(order.getId(), 0));
             vo.setCreateTime(order.getCreateTime());
@@ -145,6 +164,7 @@ public class OrderServiceImpl implements OrderService {
         vo.setId(order.getId());
         vo.setOrderNo(order.getOrderNo());
         vo.setTotalPrice(order.getTotalPrice());
+        vo.setAddressSnapshot(order.getAddressSnapshot());
         vo.setStatus(order.getStatus());
         vo.setCreateTime(order.getCreateTime());
         vo.setItems(orderItemMapper.selectList(new LambdaQueryWrapper<OrderItem>()
@@ -191,6 +211,66 @@ public class OrderServiceImpl implements OrderService {
             throw new BusinessException(404, "订单不存在");
         }
         return order;
+    }
+
+    // ==================== 管理端 ====================
+
+    @Override
+    public PageVO<OrderVO> adminPage(AdminOrderQueryDTO query) {
+        LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
+        if (query.getStatus() != null) {
+            wrapper.eq(Order::getStatus, query.getStatus());
+        }
+        wrapper.orderByDesc(Order::getCreateTime).orderByDesc(Order::getId);
+        Page<Order> page = orderMapper.selectPage(new Page<>(query.getPage(), query.getSize()), wrapper);
+
+        List<OrderVO> records = List.of();
+        List<Order> orders = page.getRecords();
+        if (!orders.isEmpty()) {
+            List<Long> orderIds = orders.stream().map(Order::getId).toList();
+            List<OrderItem> items = orderItemMapper.selectList(new LambdaQueryWrapper<OrderItem>()
+                    .in(OrderItem::getOrderId, orderIds));
+            Map<Long, Integer> countMap = items.stream()
+                    .collect(Collectors.groupingBy(OrderItem::getOrderId,
+                            Collectors.summingInt(OrderItem::getQuantity)));
+            records = orders.stream().map(order -> {
+                OrderVO vo = new OrderVO();
+                vo.setId(order.getId());
+                vo.setOrderNo(order.getOrderNo());
+                vo.setTotalPrice(order.getTotalPrice());
+                vo.setUserId(order.getUserId());
+                vo.setAddressSnapshot(order.getAddressSnapshot());
+                vo.setStatus(order.getStatus());
+                vo.setItemCount(countMap.getOrDefault(order.getId(), 0));
+                vo.setCreateTime(order.getCreateTime());
+                return vo;
+            }).toList();
+        }
+        PageVO<OrderVO> pv = new PageVO<>();
+        pv.setRecords(records);
+        pv.setTotal(page.getTotal());
+        pv.setPage(page.getCurrent());
+        pv.setSize(page.getSize());
+        return pv;
+    }
+
+    @Override
+    public OrderDetailVO adminGetDetail(Long id) {
+        Order order = orderMapper.selectById(id);
+        if (order == null) {
+            throw new BusinessException(404, "订单不存在");
+        }
+        OrderDetailVO vo = new OrderDetailVO();
+        vo.setId(order.getId());
+        vo.setOrderNo(order.getOrderNo());
+        vo.setTotalPrice(order.getTotalPrice());
+        vo.setAddressSnapshot(order.getAddressSnapshot());
+        vo.setStatus(order.getStatus());
+        vo.setCreateTime(order.getCreateTime());
+        vo.setItems(orderItemMapper.selectList(new LambdaQueryWrapper<OrderItem>()
+                .eq(OrderItem::getOrderId, order.getId())
+                .orderByAsc(OrderItem::getId)));
+        return vo;
     }
 
     /** 订单号：yyyyMMddHHmmss + 6 位随机数 */

@@ -28,6 +28,9 @@ public class Order {
     /** 订单总价（单位：分） */
     private Long totalPrice;
 
+    /** 收货地址快照（收货人+手机+地址，下单时固化） */
+    private String addressSnapshot;
+
     /** 状态：0 待支付 / 1 已支付 / 2 已取消 */
     private Integer status;
 

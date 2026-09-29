@@ -27,13 +27,15 @@ function logout() {
 
 <template>
   <div class="app">
-    <header v-if="route.name !== 'login'" class="header">
+    <header v-if="route.name !== 'login' && !route.meta.admin" class="header">
       <span class="logo" @click="router.push('/')">电商平台</span>
       <nav class="nav">
         <router-link to="/">首页</router-link>
         <router-link to="/products">商品</router-link>
         <router-link to="/cart">购物车</router-link>
         <router-link to="/orders">我的订单</router-link>
+        <router-link to="/address">收货地址</router-link>
+        <router-link v-if="appStore.isAdmin" to="/admin/products">后台管理</router-link>
       </nav>
       <div class="user">
         <template v-if="appStore.token">
